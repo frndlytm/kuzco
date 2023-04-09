@@ -11,3 +11,5 @@ flake8-bugbear
 isort
 mypy
 
+# Docs
+mkdocs

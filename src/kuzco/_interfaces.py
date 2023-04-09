@@ -1,10 +1,12 @@
+from abc import ABC, abstractmethod
 from functools import singledispatchmethod
 from typing import Generic, Iterable
 
 from ._types import Message, MessageStream
 
 
-class IAggregator:
+class IAggregator(ABC):
+    @abstractmethod
     def aggregate(self, messages: MessageStream) -> Message:
         raise NotImplementedError()
 
@@ -12,7 +14,8 @@ class IAggregator:
         return self.aggregate(messages)
 
 
-class IFilter:
+class IFilter(ABC):
+    @abstractmethod
     def filter_(self, messages: MessageStream) -> MessageStream:
         raise NotImplementedError()
 
@@ -20,7 +23,8 @@ class IFilter:
         yield from self.filter_(messages)
 
 
-class IMuxer:
+class IMuxer(ABC):
+    @abstractmethod
     def mux(self, message: Message) -> MessageStream:
         raise NotImplementedError()
 
@@ -28,7 +32,8 @@ class IMuxer:
         yield from self.mux(message)
 
 
-class ITransformer:
+class ITransformer(ABC):
+    @abstractmethod
     def transform(self, message: Message) -> Message:
         raise NotImplementedError()
 
