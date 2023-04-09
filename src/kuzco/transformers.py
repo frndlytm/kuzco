@@ -5,7 +5,7 @@ from . import ITransformer, Message
 from .util import compose
 
 
-class IdentityTransform(ITransformer):
+class IdentityTransformer(ITransformer):
     def transform(self, message: Message) -> Message:
         return message
 
@@ -38,7 +38,7 @@ class CompositeTransformer(ITransformer):
 
 class PipelineTransformer(ITransformer):
     def __init__(self, *steps: ITransformer):
-        self.steps = list(steps)
+        self.steps = [IdentityTransformer(), *steps]
         self._transform = reduce(compose, self.steps)
 
     def then(self, step: ITransformer) -> "PipelineTransformer":
