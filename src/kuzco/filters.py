@@ -1,12 +1,15 @@
-from . import IFilter, Message, MessageStream
+from typing import Callable
+
+from ._interfaces import IFilter
+from ._types import Channel, Message
 
 
 class Include(IFilter):
     def __init__(self, condition: Callable[[Message], bool]):
         self.condition = condition
 
-    def filter_(self, messages: MessageStream) -> MessageStream:
-        for message in messages:
+    async def filter_(self, channel: Channel) -> Channel:
+        async for message in channel:
             if self.condition(message):
                 yield message
 
@@ -15,8 +18,8 @@ class Exclude(IFilter):
     def __init__(self, condition: Callable[[Message], bool]):
         self.condition = condition
 
-    def filter_(self, messages: MessageStream) -> MessageStream:
-        for message in messages:
+    async def filter_(self, channel: Channel) -> Channel:
+        async for message in channel:
             if not self.condition(message):
                 yield message
 
@@ -25,22 +28,19 @@ class Map(IFilter):
     def __init__(self, f: Callable[[Message], Message]):
         self.f = f
 
-    def filter_(self, messages: MessageStream) -> MessageStream:
-        for message in messages:
+    async def filter_(self, channel: Channel) -> Channel:
+        async for message in channel:
             yield self.f(message)
 
 
-def isiterable(x: Any) -> bool:
-    return isinstance(x, Iterable)
-
-
-def flatten(xs: Sequence) -> Sequence:
-    for x in xs:
-        if isinstance(x, Message): yield x
-        elif isiterable(x): yield from x
-        else: raise ValueError("Primitives not streamable")
-
-
 class Flatten(IFilter):
-    def filter_(self, messages: MessageStream) -> MessageStream:
-        yield from flatten(messages)
+    async def filter_(self, channel: Channel) -> Channel:
+        async for message in channel:
+            if isinstance(message, dict):
+                yield message
+            elif isinstance(message, list):
+                for submessage in message:
+                    yield submessage
+            else:
+                raise ValueError("Primitives not streamable")
+

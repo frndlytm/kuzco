@@ -5,12 +5,12 @@ from . import ITransformer, Message
 from .util import compose
 
 
-class IdentityTransformer(ITransformer):
+class Identity(ITransformer):
     def transform(self, message: Message) -> Message:
         return message
 
 
-class FunctionTransformer(ITransformer):
+class Apply(ITransformer):
     def __init__(self, f: Callable[[Message], Message]):
         self.f = f
 
@@ -18,12 +18,12 @@ class FunctionTransformer(ITransformer):
         return self.f(message)
 
 
-class CompositeTransformer(ITransformer):
+class Composite(ITransformer):
     def __init__(self, root: ITransformer, **components):
         self.root = root
         self.components = dict(components)
 
-    def add(self, key: str, transform: ITransformer) -> "CompositeTransformer":
+    def add(self, key: str, transform: ITransformer) -> "Composite":
         self.components[key] = transform
         return self
 
@@ -36,12 +36,12 @@ class CompositeTransformer(ITransformer):
         )
 
 
-class PipelineTransformer(ITransformer):
+class Chain(ITransformer):
     def __init__(self, *steps: ITransformer):
-        self.steps = [IdentityTransformer(), *steps]
+        self.steps = [Identity(), *steps]
         self._transform = reduce(compose, self.steps)
 
-    def then(self, step: ITransformer) -> "PipelineTransformer":
+    def then(self, step: ITransformer) -> "Chain":
         self.steps.append(step)
         self._transform = reduce(compose, self.steps)
         return self

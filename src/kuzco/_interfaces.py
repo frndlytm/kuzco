@@ -2,34 +2,36 @@ from abc import ABC, abstractmethod
 from functools import singledispatchmethod
 from typing import Generic, Iterable
 
-from ._types import Message, MessageStream
+from ._types import Message, Channel
 
-
-class IAggregator(ABC):
-    @abstractmethod
-    def aggregate(self, messages: MessageStream) -> Message:
-        raise NotImplementedError()
-
-    def __call__(self, messages: MessageStream) -> Message:
-        return self.aggregate(messages)
+__all__ = ["IFilter", "IMuxer", "IReducer", "ITransformer"]
 
 
 class IFilter(ABC):
     @abstractmethod
-    def filter_(self, messages: MessageStream) -> MessageStream:
+    def filter_(self, channel: Channel) -> Channel:
         raise NotImplementedError()
 
-    def __call__(self, messages: MessageStream) -> MessageStream:
-        yield from self.filter_(messages)
+    def __call__(self, channel: Channel) -> Channel:
+        yield from self.pipe(channel)
 
 
 class IMuxer(ABC):
     @abstractmethod
-    def mux(self, message: Message) -> MessageStream:
+    def mux(self, message: Message) -> Channel:
         raise NotImplementedError()
 
-    def __call__(self, message: Message) -> MessageStream:
+    def __call__(self, message: Message) -> Channel:
         yield from self.mux(message)
+
+
+class IReducer(ABC):
+    @abstractmethod
+    def reduce(self, channel: Channel) -> Message:
+        raise NotImplementedError()
+
+    def __call__(self, channel: Channel) -> Message:
+        return self.reduce(channel)
 
 
 class ITransformer(ABC):
