@@ -18,14 +18,37 @@ class Pipeline:
         self.closed = False
         self.steps = []
 
-    def __or__(self, step: PipelineStep) -> "Pipeline":
+    def __or__(self, step) -> "Pipeline":
+        """Support the | operator for adding steps to the Pipeline."""
         return self.then(step)
 
-    @singledispatchmethod
-    def then(self, step) -> "Pipeline":
-        """`then` is the explicit method call to add a step to the pipeline. It
-        dispatches based on type of the step to the following methods:
+    def __call__(self, channel: Channel) -> Message:
+        """Execute the Sequence of steps on the Channel of Messages.
 
+        Args:
+            channel (Channel):
+                A Channel of Messages
+
+        Returns:
+            Message:
+                A Reduced form of the Channel down to a result set,
+                potentially just a list of transformed messages
+
+        """
+        # If we don't have an IReducer on the end, then reduce the Channel
+        # to a list, i.e., a finite result
+        if not self.closed:
+            self.steps.append(list)
+            self.closed = True
+
+        return reduce(compose, self.steps)(channel)
+
+    @singledispatchmethod
+    def then(self, _) -> "Pipeline":
+        """
+        `then` is the explicit method call to add a step to the pipeline. It
+        dispatches based on type of the step to the following methods:
+    
         `then_filter` adds an IFilter to the Pipeline. In general, a Pipeline
         is just a Sequence of filters that map over a channel to 
 
@@ -41,7 +64,6 @@ class Pipeline:
 
         `then_transform` adds an ITransform to the pipeline by adding a Map step
         for the ITransform onto the Pipeline.
-
 
         Args:
             step (IReducer):
@@ -65,20 +87,6 @@ class Pipeline:
 
     @then.register(IMuxer)
     def then_mux(self, step: IMuxer) -> "Pipeline":
-        """
-
-        Args:
-            step (IMuxer): The IMuxer we want to apply over the channel.
-
-        Raises:
-            ImmutablePipelineException:
-                If the Pipeline is closed, we cannot add new steps
-
-        Returns:
-            Pipeline:
-                This pipeline, configured with the new step.
-
-        """
         if self.closed: raise ImmutablePipelineException()
         return self | Map(step) | Flatten()
 
@@ -93,26 +101,3 @@ class Pipeline:
     def then_transform(self, step: ITransformer) -> "Pipeline":
         if self.closed: raise ImmutablePipelineException()
         return self | Map(step)
-
-    def __call__(self, channel: Channel) -> Message:
-        """Execute the Sequence of steps on the Channel of Messages.
-
-        Args:
-            channel (Channel):
-                A Channel of Messages
-
-        Returns:
-            Message:
-                A Reduced form of the Channel down to a result set,
-                potentially just a list of transformed messages
-
-        """
-        # If we don't have an IReducer on the end, then reduce the Channel
-        # to a list, i.e., a finite result
-        if not self.closed:
-            self.steps.append(list)
-            self.closed = True
-
-        return reduce(compose, self.steps)(channel)
-
-
