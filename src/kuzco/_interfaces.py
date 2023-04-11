@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
-from functools import singledispatchmethod
-from typing import Generic, Iterable
 
-from ._types import Message, Channel
+from ._types import Channel, Message
 
 __all__ = ["IFilter", "IMuxer", "IReducer", "ITransformer"]
 
@@ -13,7 +11,7 @@ class IFilter(ABC):
         raise NotImplementedError()
 
     def __call__(self, channel: Channel) -> Channel:
-        yield from self.pipe(channel)
+        yield from self.filter_(channel)
 
 
 class IMuxer(ABC):

@@ -1,11 +1,10 @@
-
 class ExampleTransform(ITransformer):
     def transform(self, message):
         return {"hello": message.get("world")}
-    
+
 
 f = (
-    Pipeline() 
+    Pipeline()
     | Mapper(ExampleTransform())
     | Exclude(lambda m: m.get("hello") == "Mars")
 )

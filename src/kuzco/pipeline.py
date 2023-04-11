@@ -1,28 +1,40 @@
-from functools import reduce, singledispatchmethod
+from functools import singledispatchmethod
 
-from ._interfaces import *
-from ._types import *
-from .filters import Map, Flatten
-
+from . import filters, reducers, transforms
+from ._interfaces import IFilter, IMuxer, IReducer, ITransformer
+from ._types import Channel, Message
 from .util import compose
 
 PipelineStep = IReducer | IFilter | IMuxer | ITransformer
 
 
-class ImmutablePipelineException(Exception): pass
+class ImmutablePipelineException(Exception):
+    pass
 
 
-class Pipeline:
-    def __init__(self, chunksize: int = 20):
-        self.chunksize = chunksize
+class Pipeline(IReducer):
+    """
+    Pipelines are the composition of many filters applied to the Messages
+    on a Channel. Specifically, iteratively building a Pipeline is the same
+    as adding a step to the run method by function composition.
+
+    A Pipeline is a callable function that takes in a Channel of messages and
+    returns a Message, therefore it is an IReducer implementation.
+
+    By default, a Pipeline auto-configures itself to Collect the results of
+    the pipeline into a list; however, ending a building process with an IReducer
+    overrides that behavior.
+    """
+
+    def __init__(self):
         self.closed = False
-        self.steps = []
+        self.run = filters.Map(transforms.Identity())
 
     def __or__(self, step) -> "Pipeline":
         """Support the | operator for adding steps to the Pipeline."""
         return self.then(step)
 
-    def __call__(self, channel: Channel) -> Message:
+    def reduce(self, channel: Channel) -> Message:
         """Execute the Sequence of steps on the Channel of Messages.
 
         Args:
@@ -38,23 +50,23 @@ class Pipeline:
         # If we don't have an IReducer on the end, then reduce the Channel
         # to a list, i.e., a finite result
         if not self.closed:
-            self.steps.append(list)
+            self.run = compose(self.run, reducers.Collect())
             self.closed = True
 
-        return reduce(compose, self.steps)(channel)
+        return self.run(channel)
 
     @singledispatchmethod
     def then(self, _) -> "Pipeline":
         """
         `then` is the explicit method call to add a step to the pipeline. It
         dispatches based on type of the step to the following methods:
-    
+
         `then_filter` adds an IFilter to the Pipeline. In general, a Pipeline
-        is just a Sequence of filters that map over a channel to 
+        is just a Sequence of filters that map over a channel to
 
         `then_mux` adds an IMuxer to the Pipeline as a builder, i.e., returning
         the Pipeline we're building.
-        
+
         Since IMuxers take a single Message and then turns it into a Channel,
         an IMuxer actually needs to combine Map and Flatten semantics to function
         effectively.
@@ -81,23 +93,34 @@ class Pipeline:
 
     @then.register(IFilter)
     def then_filter(self, step: IFilter) -> "Pipeline":
-        if self.closed: raise ImmutablePipelineException()
-        self.steps.append(step)
+        if self.closed:
+            raise ImmutablePipelineException()
+
+        self.run = compose(self.run, step)
         return self
 
     @then.register(IMuxer)
     def then_mux(self, step: IMuxer) -> "Pipeline":
-        if self.closed: raise ImmutablePipelineException()
-        return self | Map(step) | Flatten()
+        if self.closed:
+            raise ImmutablePipelineException()
+
+        self.run = compose(self.run, filters.Map(step))
+        self.run = compose(self.run, filters.Flatten())
+        return self
 
     @then.register(IReducer)
     def then_reduce(self, step: IReducer) -> "Pipeline":
-        if self.closed: raise ImmutablePipelineException()
-        self.steps.append(step)
+        if self.closed:
+            raise ImmutablePipelineException()
+
+        self.run = compose(self.run, step)
         self.closed = True
         return self
 
     @then.register(ITransformer)
     def then_transform(self, step: ITransformer) -> "Pipeline":
-        if self.closed: raise ImmutablePipelineException()
-        return self | Map(step)
+        if self.closed:
+            raise ImmutablePipelineException()
+
+        self.run = compose(self.run, filters.Map(step))
+        return self
