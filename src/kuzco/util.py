@@ -1,5 +1,5 @@
 from typing import Any, Callable, Iterable, Sequence
-from ._types import Message
+from ._types import Channel, Message
 
 
 def compose(f: Callable, g: Callable) -> Callable:
@@ -17,3 +17,7 @@ def flatten(xs: Sequence) -> Sequence:
         if isinstance(x, Message): yield x
         elif isiterable(x): yield from x
         else: raise ValueError("Primitives not streamable")
+
+
+def chan(*messages: Message) -> Channel:
+    for message in messages: yield message

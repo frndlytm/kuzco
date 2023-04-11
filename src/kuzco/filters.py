@@ -1,3 +1,4 @@
+from itertools import filterfalse
 from typing import Callable
 
 from ._interfaces import IFilter
@@ -8,34 +9,29 @@ class Include(IFilter):
     def __init__(self, condition: Callable[[Message], bool]):
         self.condition = condition
 
-    async def filter_(self, channel: Channel) -> Channel:
-        async for message in channel:
-            if self.condition(message):
-                yield message
+    def filter_(self, channel: Channel) -> Channel:
+        yield from filter(self.condition, channel)
 
 
 class Exclude(IFilter):
     def __init__(self, condition: Callable[[Message], bool]):
         self.condition = condition
 
-    async def filter_(self, channel: Channel) -> Channel:
-        async for message in channel:
-            if not self.condition(message):
-                yield message
+    def filter_(self, channel: Channel) -> Channel:
+        yield from filterfalse(self.condition, channel)
 
 
 class Map(IFilter):
     def __init__(self, f: Callable[[Message], Message]):
         self.f = f
 
-    async def filter_(self, channel: Channel) -> Channel:
-        async for message in channel:
-            yield self.f(message)
+    def filter_(self, channel: Channel) -> Channel:
+        yield from map(self.f, channel)
 
 
 class Flatten(IFilter):
-    async def filter_(self, channel: Channel) -> Channel:
-        async for message in channel:
+    def filter_(self, channel: Channel) -> Channel:
+        for message in channel:
             if isinstance(message, dict):
                 yield message
             elif isinstance(message, list):
