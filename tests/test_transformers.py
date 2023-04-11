@@ -1,7 +1,5 @@
-import pytest
-
 from kuzco import Message
-from kuzco.transformers import Apply, Chain, Composite, Identity
+from kuzco.transforms import Apply, Chain, Composite, Identity
 
 
 def greet(message: Message) -> Message:
@@ -11,13 +9,8 @@ def greet(message: Message) -> Message:
     return message
 
 
-def empty(message: Message) -> Message:
+def empty(_: Message) -> Message:
     return {}
-
-
-@pytest.fixture
-def earth(worlds):
-    yield list(worlds)[2]
 
 
 def test_apply(earth):
@@ -27,11 +20,7 @@ def test_apply(earth):
 
 def test_chain(earth):
     # Construct of Chain of transforms to compose together
-    transform = (
-        Chain()
-        .then(Apply(greet))
-        .then(Apply(empty))
-    )
+    transform = Chain().then(Apply(greet)).then(Apply(empty))
 
     # Call the Chain on the message
     assert transform(earth) == {}
@@ -41,10 +30,7 @@ def test_composite(earth):
     expect = dict(earth, greeting="Hello, Earth!", properties={})
 
     # Configure a Composite transform
-    transform = (
-        Composite(greet)
-        .add("properties", Apply(empty))
-    )
+    transform = Composite(greet).add("properties", Apply(empty))
 
     # Call the Composite
     assert transform(earth) == expect

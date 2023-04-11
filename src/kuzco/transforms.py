@@ -28,10 +28,8 @@ class Composite(ITransformer):
 
     def transform(self, message: Message) -> Message:
         return dict(
-            self.root(message), **{
-                key: transform(message)
-                for key, transform in self.components.items()
-            }
+            self.root(message),
+            **{key: transform(message) for key, transform in self.components.items()}
         )
 
 

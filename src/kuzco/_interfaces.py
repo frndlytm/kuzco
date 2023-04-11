@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from ._types import Message, Channel
+from ._types import Channel, Message
 
 __all__ = ["IFilter", "IMuxer", "IReducer", "ITransformer"]
 

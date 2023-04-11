@@ -1,15 +1,15 @@
-from functools import reduce, singledispatchmethod
+from functools import singledispatchmethod
 
-from ._interfaces import *
-from ._types import *
-from . import filters, reducers, transformers
-
+from . import filters, reducers, transforms
+from ._interfaces import IFilter, IMuxer, IReducer, ITransformer
+from ._types import Channel, Message
 from .util import compose
 
 PipelineStep = IReducer | IFilter | IMuxer | ITransformer
 
 
-class ImmutablePipelineException(Exception): pass
+class ImmutablePipelineException(Exception):
+    pass
 
 
 class Pipeline(IReducer):
@@ -25,10 +25,10 @@ class Pipeline(IReducer):
     the pipeline into a list; however, ending a building process with an IReducer
     overrides that behavior.
     """
-    def __init__(self, chunksize: int = 20):
-        self.chunksize = chunksize
+
+    def __init__(self):
         self.closed = False
-        self.run = filters.Map(transformers.Identity())
+        self.run = filters.Map(transforms.Identity())
 
     def __or__(self, step) -> "Pipeline":
         """Support the | operator for adding steps to the Pipeline."""
@@ -60,13 +60,13 @@ class Pipeline(IReducer):
         """
         `then` is the explicit method call to add a step to the pipeline. It
         dispatches based on type of the step to the following methods:
-    
+
         `then_filter` adds an IFilter to the Pipeline. In general, a Pipeline
-        is just a Sequence of filters that map over a channel to 
+        is just a Sequence of filters that map over a channel to
 
         `then_mux` adds an IMuxer to the Pipeline as a builder, i.e., returning
         the Pipeline we're building.
-        
+
         Since IMuxers take a single Message and then turns it into a Channel,
         an IMuxer actually needs to combine Map and Flatten semantics to function
         effectively.

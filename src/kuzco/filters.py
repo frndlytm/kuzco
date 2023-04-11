@@ -39,4 +39,3 @@ class Flatten(IFilter):
                     yield submessage
             else:
                 raise ValueError("Primitives not streamable")
-

@@ -3,6 +3,7 @@ Top-level package for Kuzco
 """
 from ._interfaces import IFilter, IMuxer, IReducer, ITransformer
 from ._types import Channel, Message, Primitive
+from .pipeline import Pipeline
 from .util import chan
 
 __author__ = "Christian J. DiMare-Baits"
@@ -16,15 +17,14 @@ __all__ = [
     "reducers",
     "transformers",
     "util",
-
     # Interfaces
     "IFilter",
     "IMuxer",
     "ITransformer",
     "IReducer",
-
     # Types
     "Channel",
     "Message",
+    "Pipeline",
     "Primitive",
 ]

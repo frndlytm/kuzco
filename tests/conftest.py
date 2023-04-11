@@ -17,3 +17,8 @@ def worlds():
             {"id": 8, "world": "Neptune"},
         ]
     )
+
+
+@pytest.fixture
+def earth(worlds):
+    yield list(worlds)[2]
